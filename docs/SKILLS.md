@@ -22,6 +22,9 @@
 ## v1 웹 앱 운영
 
 - 소스: `web/index.html` (정적 단일 파일, 빌드 없음) — 더블클릭 또는 임의 정적 서버로 실행
+- **배포**: GitHub Pages — https://tinklewhale.github.io/meeting-translator/
+  - 배포 방법: `web/index.html`을 `gh-pages` 브랜치 루트에 `index.html`로 복사 후 push
+    (main 수정 → 배포 반영은 이 복사-푸시를 다시 실행. 자동화 필요 시 GitHub Actions 워크플로 추가)
 - 번역: Google gtx 비공식 엔드포인트(무료) / 음성 인식: Web Speech API(크롬, 오디오 비저장)
 - AI(어휘·답변 제안·작문·리포트): 사용자 API 키로 Claude(claude-opus-5) 직접 호출(선택)
 - **AI 하네스 규칙(코드의 `HARNESS` 상수, 모든 Claude 호출의 system 프롬프트)**:
