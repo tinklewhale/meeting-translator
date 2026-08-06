@@ -1,0 +1,656 @@
+<title>미팅 링고 패드</title>
+<style>
+  :root {
+    --bg: #F5F6F4;
+    --surface: #FFFFFF;
+    --ink: #20242C;
+    --muted: #656D79;
+    --line: #DFE3DE;
+    --accent: #33628F;
+    --accent-ink: #274B6D;
+    --accent-soft: #E9EFF5;
+    --mark-ink: #7A5A14;
+    --mark-bg: #F5EDD7;
+    --good: #2E7D51;
+    --on-accent: #FFFFFF;
+    --shadow: 0 2px 10px rgba(32,36,44,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171C;
+      --surface: #1C2027;
+      --ink: #E6E9ED;
+      --muted: #99A2AD;
+      --line: #2B3038;
+      --accent: #7FA8D0;
+      --accent-ink: #A8C6E4;
+      --accent-soft: #24313F;
+      --mark-ink: #D9B76F;
+      --mark-bg: #35300F;
+      --good: #6FBF92;
+      --on-accent: #14171C;
+      --shadow: 0 2px 10px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F5F6F4; --surface: #FFFFFF; --ink: #20242C; --muted: #656D79;
+    --line: #DFE3DE; --accent: #33628F; --accent-ink: #274B6D; --accent-soft: #E9EFF5;
+    --mark-ink: #7A5A14; --mark-bg: #F5EDD7; --good: #2E7D51; --on-accent: #FFFFFF;
+    --shadow: 0 2px 10px rgba(32,36,44,.06);
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171C; --surface: #1C2027; --ink: #E6E9ED; --muted: #99A2AD;
+    --line: #2B3038; --accent: #7FA8D0; --accent-ink: #A8C6E4; --accent-soft: #24313F;
+    --mark-ink: #D9B76F; --mark-bg: #35300F; --good: #6FBF92; --on-accent: #14171C;
+    --shadow: 0 2px 10px rgba(0,0,0,.3);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+      "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px 80px; }
+
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; padding: 18px 0 10px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { font-size: 18px; font-weight: 800; margin: 0; letter-spacing: -.01em; }
+  .brand .sub { font-size: 12px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+  .langpair { display: flex; align-items: center; gap: 6px; }
+  .langpair select {
+    appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    border-radius: 8px; padding: 6px 26px 6px 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                      linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 55%, calc(100% - 10px) 55%;
+    background-size: 4px 4px; background-repeat: no-repeat;
+  }
+  .swap {
+    border: 1px solid var(--line); background: var(--surface); color: var(--accent);
+    border-radius: 8px; width: 30px; height: 30px; cursor: pointer; font-size: 14px; line-height: 1;
+  }
+  .swap:hover { background: var(--accent-soft); }
+
+  /* ── search ── */
+  .searchbox {
+    position: sticky; top: 0; z-index: 30;
+    background: var(--bg); padding: 8px 0 10px;
+  }
+  .search-inner {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 10px 12px;
+  }
+  .search-row { display: flex; align-items: center; gap: 8px; }
+  .search-row input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: var(--ink);
+    font-size: 16px; font-family: inherit; padding: 4px 2px;
+  }
+  .search-row input::placeholder { color: var(--muted); }
+  .detect {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--accent-ink);
+    background: var(--accent-soft); border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  .ext-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .ext-row a, .ext-row button {
+    font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none;
+    border: 1px solid var(--line); border-radius: 7px; padding: 4px 10px; background: transparent;
+    cursor: pointer; font-family: inherit;
+  }
+  .ext-row a:hover, .ext-row button:hover { background: var(--accent-soft); }
+  .results { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+  .results:empty { display: none; }
+  .result {
+    display: flex; align-items: baseline; gap: 10px; padding: 6px 4px; border-radius: 7px; cursor: pointer;
+  }
+  .result:hover { background: var(--accent-soft); }
+  .result .w { font-weight: 700; }
+  .result .m { color: var(--muted); font-size: 13.5px; }
+  .result .dir {
+    margin-left: auto; font-size: 10px; color: var(--muted); letter-spacing: .05em;
+    font-family: ui-monospace, Consolas, monospace; white-space: nowrap;
+  }
+  .no-hit { color: var(--muted); font-size: 13px; padding: 6px 4px; }
+
+  /* ── tabs ── */
+  nav.tabs {
+    display: flex; gap: 2px; margin: 14px 0 0; border-bottom: 1px solid var(--line);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs button {
+    border: none; background: none; color: var(--muted); font-family: inherit;
+    font-size: 14px; font-weight: 600; padding: 10px 14px; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+  }
+  nav.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+  nav.tabs button:hover { color: var(--ink); }
+  section.panel { display: none; padding-top: 18px; }
+  section.panel.on { display: block; }
+
+  /* ── phrases ── */
+  .cat { margin-bottom: 22px; }
+  .cat h3 {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+    margin: 0 0 8px; font-weight: 700;
+  }
+  .phrase {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 8px; cursor: pointer; position: relative;
+  }
+  .phrase:hover { border-color: var(--accent); }
+  .phrase .en { font-weight: 650; }
+  .phrase .kr { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+  .phrase .copied {
+    position: absolute; right: 12px; top: 10px; font-size: 11px; color: var(--good);
+    font-weight: 700; opacity: 0; transition: opacity .15s;
+  }
+  .phrase.flash .copied { opacity: 1; }
+
+  /* ── agenda ── */
+  .hint {
+    background: var(--accent-soft); border-radius: 10px; padding: 12px 14px;
+    font-size: 13.5px; color: var(--accent-ink); margin-bottom: 14px;
+  }
+  textarea#agendaIn {
+    width: 100%; min-height: 140px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--surface); color: var(--ink); font-family: inherit; font-size: 14.5px;
+    padding: 12px; resize: vertical; outline: none; line-height: 1.6;
+  }
+  textarea#agendaIn:focus { border-color: var(--accent); }
+  .agenda-actions { display: flex; gap: 8px; margin: 10px 0 16px; }
+  .btn {
+    border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
+    border-radius: 8px; padding: 7px 16px; font-size: 13.5px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .annotated {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; white-space: pre-wrap; font-size: 15px; line-height: 1.9;
+  }
+  .annotated:empty { display: none; }
+  .tip {
+    background: var(--mark-bg); color: inherit; border-bottom: 1.5px dotted var(--mark-ink);
+    border-radius: 3px; padding: 0 2px; position: relative; cursor: help;
+  }
+  .tip:hover::after {
+    content: attr(data-t);
+    position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); font-size: 12.5px; font-weight: 600;
+    padding: 5px 10px; border-radius: 7px; white-space: nowrap; z-index: 40;
+    box-shadow: var(--shadow); line-height: 1.4;
+  }
+  .tip:hover::before {
+    content: ""; position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: var(--ink); z-index: 40;
+  }
+
+  /* ── vocab / translation ── */
+  .empty {
+    border: 1.5px dashed var(--line); border-radius: 12px; padding: 26px 20px;
+    text-align: center; color: var(--muted); font-size: 14px;
+  }
+  .empty b { color: var(--ink); }
+  .vword {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 8px;
+  }
+  .vword .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .vword .w { font-weight: 750; font-size: 15.5px; }
+  .vword .m { color: var(--muted); font-size: 13.5px; }
+  .vword .ex { font-size: 13px; color: var(--accent-ink); margin-top: 3px; font-style: italic; }
+  .trans-body {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 20px; white-space: pre-wrap; line-height: 1.8;
+  }
+  footer.note { margin-top: 40px; font-size: 12px; color: var(--muted); text-align: center; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>미팅 링고 패드</h1>
+      <span class="sub">Meeting Lingo Pad</span>
+    </div>
+    <div class="langpair">
+      <select id="srcLang" aria-label="출발 언어">
+        <option value="ko" selected>한국어</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+        <option value="zh-CN">中文</option>
+        <option value="es">Español</option>
+        <option value="de">Deutsch</option>
+        <option value="fr">Français</option>
+      </select>
+      <button class="swap" id="swapBtn" title="언어 바꾸기" aria-label="언어 바꾸기">⇄</button>
+      <select id="tgtLang" aria-label="도착 언어">
+        <option value="ko">한국어</option>
+        <option value="en" selected>English</option>
+        <option value="ja">日本語</option>
+        <option value="zh-CN">中文</option>
+        <option value="es">Español</option>
+        <option value="de">Deutsch</option>
+        <option value="fr">Français</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="searchbox">
+    <div class="search-inner">
+      <div class="search-row">
+        <input id="q" type="text" placeholder="단어·문장 검색 — 한/영 자동 감지" autocomplete="off" />
+        <span class="detect" id="detectChip">AUTO</span>
+      </div>
+      <div class="results" id="results"></div>
+      <div class="ext-row">
+        <a id="gLink" href="#" target="_blank" rel="noopener">Google 번역에서 열기 ↗</a>
+        <a id="pLink" href="#" target="_blank" rel="noopener">Papago에서 열기 ↗</a>
+        <button id="clearBtn" type="button">지우기</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="phrases" class="on">긴급 표현</button>
+    <button data-tab="agenda">아젠다 원문</button>
+    <button data-tab="translation">전체 번역</button>
+    <button data-tab="vocab">어휘 제안</button>
+  </nav>
+
+  <section class="panel on" id="panel-phrases"></section>
+
+  <section class="panel" id="panel-agenda">
+    <div class="hint">
+      아젠다를 붙여넣고 <b>단어 표시</b>를 누르면, 내장 사전(한↔영 비즈니스 용어)에 있는 단어에
+      밑줄이 생기고 <b>마우스를 올리면 뜻</b>이 보입니다. 전체 번역과 맞춤 어휘 분석은
+      Claude 채팅에 아젠다를 붙여넣으면 이 페이지에 반영해 드립니다.
+    </div>
+    <textarea id="agendaIn" placeholder="회의 아젠다를 여기에 붙여넣으세요…"></textarea>
+    <div class="agenda-actions">
+      <button class="btn" id="annotateBtn">단어 표시</button>
+      <button class="btn ghost" id="agendaClearBtn">초기화</button>
+    </div>
+    <div class="annotated" id="annotated"></div>
+  </section>
+
+  <section class="panel" id="panel-translation">
+    <div id="transEmpty" class="empty">
+      아직 번역된 아젠다가 없습니다.<br /><br />
+      <b>Claude 채팅에 아젠다 전문을 붙여넣어 주세요.</b><br />
+      전체 번역본을 이 탭에 구워서(baked) 다시 배포해 드립니다.
+    </div>
+    <div class="trans-body" id="transBody" style="display:none"></div>
+  </section>
+
+  <section class="panel" id="panel-vocab">
+    <div class="hint">
+      아젠다를 채팅으로 보내주시면 <b>AI가 분석한 회의 맞춤 어휘</b>로 교체됩니다.
+      아래는 해외 미팅에서 자주 쓰는 기본 비즈니스 어휘입니다.
+    </div>
+    <div id="vocabList"></div>
+  </section>
+
+  <footer class="note">
+    내장 사전·표현은 한국어 ↔ 영어 기준입니다. 다른 언어쌍은 상단 설정 후 Google 번역/Papago 링크를 이용하세요.
+  </footer>
+</div>
+
+<script>
+/* ───────────────────────── data ───────────────────────── */
+const DICT_EN = {
+  "agenda":"안건, 의제","minutes":"회의록","attendee":"참석자","stakeholder":"이해관계자",
+  "deliverable":"산출물","deadline":"마감 기한","milestone":"중간 목표(마일스톤)","timeline":"일정",
+  "roadmap":"로드맵","scope":"(작업) 범위","budget":"예산","forecast":"전망, 예측",
+  "estimate":"추정, 견적","proposal":"제안(서)","quote":"견적","contract":"계약",
+  "agreement":"합의, 계약","negotiation":"협상","procurement":"조달, 구매","vendor":"공급업체",
+  "supplier":"공급자","client":"고객, 발주처","customer":"고객","partner":"파트너",
+  "subsidiary":"자회사","headquarters":"본사","department":"부서","division":"사업부",
+  "executive":"임원","revenue":"매출","profit":"이익","margin":"마진, 이익률",
+  "cost":"비용","expense":"지출, 비용","invoice":"청구서","payment":"지불",
+  "pricing":"가격 책정","discount":"할인","growth":"성장","decline":"감소, 하락",
+  "increase":"증가","decrease":"감소","target":"목표","goal":"목표","objective":"목적",
+  "strategy":"전략","tactic":"전술","initiative":"(전략적) 계획, 추진 과제","priority":"우선순위",
+  "resource":"자원, 인력","allocation":"배분","bandwidth":"여력, 업무 여유",
+  "capacity":"수용력, 처리 능력","constraint":"제약","dependency":"의존성, 선행 조건",
+  "blocker":"진행을 막는 요소","bottleneck":"병목","risk":"위험 요소","issue":"문제, 이슈",
+  "concern":"우려","mitigation":"(위험) 완화, 대책","contingency":"비상 대책",
+  "assumption":"가정, 전제","requirement":"요구사항","specification":"사양, 명세",
+  "feature":"기능","functionality":"기능(성)","implementation":"구현","integration":"통합, 연동",
+  "deployment":"배포","release":"출시, 배포","launch":"출시","rollout":"단계적 출시",
+  "maintenance":"유지보수","upgrade":"업그레이드","migration":"이전, 마이그레이션",
+  "architecture":"구조, 아키텍처","infrastructure":"인프라","analytics":"분석",
+  "metric":"지표","benchmark":"기준점, 비교 지표","baseline":"기준선","threshold":"임계값",
+  "performance":"성능, 성과","efficiency":"효율","productivity":"생산성","quality":"품질",
+  "feedback":"피드백","review":"검토","approval":"승인","sign-off":"최종 승인",
+  "escalation":"상부 보고, 에스컬레이션","alignment":"조율, 방향 일치","consensus":"합의",
+  "decision":"결정","conclusion":"결론","summary":"요약","overview":"개요",
+  "update":"최신 소식, 업데이트","progress":"진행 상황","status":"상태, 현황","report":"보고(서)",
+  "follow-up":"후속 조치","takeaway":"핵심 요점","insight":"통찰","recommendation":"권고, 제안",
+  "suggestion":"제안","alternative":"대안","option":"선택지","trade-off":"상충 관계, 트레이드오프",
+  "pros":"장점","cons":"단점","advantage":"이점","disadvantage":"단점","opportunity":"기회",
+  "challenge":"난제, 도전 과제","obstacle":"장애물","solution":"해결책","approach":"접근 방식",
+  "methodology":"방법론","framework":"프레임워크, 체계","process":"프로세스, 절차",
+  "procedure":"절차","workflow":"업무 흐름","pipeline":"파이프라인, 진행 목록",
+  "backlog":"잔여 작업, 백로그","sprint":"스프린트(단기 작업 주기)","iteration":"반복, 주기",
+  "retrospective":"회고","standup":"일일 짧은 회의","kickoff":"착수 (회의)",
+  "onboarding":"온보딩, 적응 지원","headcount":"인원수, 정원","recruit":"채용하다","hire":"채용하다",
+  "retention":"유지(율), 잔존","churn":"이탈(율)","acquisition":"획득, 인수","engagement":"참여(도)",
+  "conversion":"전환(율)","funnel":"퍼널, 단계별 흐름","segment":"세그먼트, 구분 집단",
+  "persona":"페르소나, 가상 고객상","positioning":"포지셔닝","differentiation":"차별화",
+  "competitor":"경쟁사","competitive":"경쟁의, 경쟁력 있는","landscape":"판도, 시장 상황",
+  "trend":"추세","demand":"수요","supply":"공급","inventory":"재고","logistics":"물류",
+  "distribution":"유통, 배포","channel":"채널, 경로","campaign":"캠페인","promotion":"홍보, 프로모션",
+  "awareness":"인지(도)","outreach":"대외 활동, 섭외","compliance":"규정 준수","regulation":"규제",
+  "policy":"정책, 방침","audit":"감사","liability":"법적 책임","confidentiality":"기밀 유지",
+  "disclosure":"공개, 공시","patent":"특허","license":"라이선스, 허가","terms":"조건",
+  "clause":"조항","amendment":"수정, 개정","termination":"종료, 해지","renewal":"갱신",
+  "extension":"연장","postpone":"연기하다","reschedule":"일정을 변경하다","cancel":"취소하다",
+  "confirm":"확정하다","finalize":"마무리 짓다","prioritize":"우선순위를 정하다","delegate":"위임하다",
+  "coordinate":"조율하다","collaborate":"협업하다","facilitate":"진행을 돕다, 원활하게 하다",
+  "streamline":"간소화하다","optimize":"최적화하다","leverage":"활용하다","implement":"구현·실행하다",
+  "execute":"실행하다","evaluate":"평가하다","assess":"평가하다","analyze":"분석하다",
+  "investigate":"조사하다","identify":"파악하다, 찾아내다","determine":"결정하다, 밝히다",
+  "clarify":"명확히 하다","elaborate":"자세히 설명하다","summarize":"요약하다",
+  "address":"다루다, 대응하다","resolve":"해결하다","achieve":"달성하다","accomplish":"완수하다",
+  "exceed":"초과하다","outperform":"능가하다","underperform":"기대에 못 미치다",
+  "anticipate":"예상하다","projected":"예상되는","estimated":"추정된","approximately":"대략",
+  "tentative":"잠정적인","pending":"보류 중인","ongoing":"진행 중인","upcoming":"다가오는",
+  "quarterly":"분기별","annually":"연간","fiscal":"회계의","stakeholders":"이해관계자들",
+  "roi":"투자수익률 (ROI)","kpi":"핵심 성과 지표 (KPI)","mou":"양해각서 (MOU)",
+  "nda":"비밀유지계약 (NDA)","poc":"개념 검증 (PoC)","action item":"실행 항목",
+  "due diligence":"실사","next steps":"다음 단계","lead time":"소요 기간, 리드 타임",
+  "pain point":"고충, 문제점","best practice":"모범 사례","rule of thumb":"경험 법칙",
+  "ballpark":"대략적인 (수치)","bottom line":"핵심, 결론(최종 수익)","touch base":"가볍게 연락하다",
+  "circle back":"나중에 다시 논의하다","take offline":"회의 밖에서 따로 논의하다"
+};
+const DICT_KO = {
+  "안건":"agenda item","회의록":"meeting minutes","일정":"schedule / timeline","마감":"deadline",
+  "요약":"summary","결론":"conclusion","승인":"approval","검토":"review",
+  "협의":"discussion / consultation","합의":"agreement / consensus","조율":"coordination / alignment",
+  "우선순위":"priority","예산":"budget","견적":"quote / estimate","계약":"contract",
+  "협상":"negotiation","매출":"revenue","이익":"profit","비용":"cost / expense","지표":"metric",
+  "성과":"performance / results","목표":"goal / target","전략":"strategy","방안":"plan / measure",
+  "대안":"alternative","제안":"proposal / suggestion","요구사항":"requirements",
+  "기능":"feature / function","구현":"implementation","배포":"deployment / release","출시":"launch",
+  "연동":"integration","유지보수":"maintenance","개선":"improvement","문제":"issue / problem",
+  "원인":"cause","해결":"resolution","대응":"response / handling","위험":"risk","우려":"concern",
+  "진행 상황":"progress / status","진행":"progress","후속 조치":"follow-up",
+  "담당자":"person in charge / owner","부서":"department","인력":"manpower / headcount",
+  "채용":"hiring / recruitment","고객":"customer / client","사용자":"user","시장":"market",
+  "경쟁사":"competitor","점유율":"market share","수요":"demand","공급":"supply","재고":"inventory",
+  "납기":"delivery date","납품":"delivery","품질":"quality","규정":"regulation / policy",
+  "준수":"compliance","기밀":"confidential","특허":"patent","갱신":"renewal","연장":"extension",
+  "연기":"postponement","취소":"cancellation","확정":"confirmation","보류":"on hold / pending",
+  "논의":"discussion","공유":"sharing","피드백":"feedback","회고":"retrospective","착수":"kickoff",
+  "산출물":"deliverable","범위":"scope","병목":"bottleneck","의존성":"dependency","제약":"constraint",
+  "이해관계자":"stakeholder","효율":"efficiency","생산성":"productivity","전환율":"conversion rate",
+  "이탈률":"churn rate","현황":"current status","일정 변경":"rescheduling","위임":"delegation",
+  "협업":"collaboration","간소화":"streamlining","최적화":"optimization","활용":"utilization",
+  "평가":"evaluation / assessment","분석":"analysis","파악":"identifying / grasping",
+  "명확화":"clarification","달성":"achievement","초과":"exceeding","예상":"expectation / forecast",
+  "잠정":"tentative","분기":"quarter","연간":"annual","회계":"accounting / fiscal"
+};
+
+const PHRASES = [
+  { cat: "시간 벌기 · 머뭇거릴 때", items: [
+    ["Let me think about that for a second.","잠깐 생각할 시간을 주세요."],
+    ["That's a good question — give me a moment.","좋은 질문이네요, 잠시만요."],
+    ["How should I put it…","뭐라고 표현해야 할까요…"],
+    ["What I'm trying to say is…","제가 하려는 말은…"],
+    ["Sorry, I lost my train of thought.","죄송해요, 하려던 말을 놓쳤어요."],
+    ["Let me rephrase that.","다시 정리해서 말씀드릴게요."]
+  ]},
+  { cat: "되묻기 · 확인", items: [
+    ["Sorry, could you say that again?","죄송하지만 다시 한 번 말씀해 주시겠어요?"],
+    ["Could you speak a little slower, please?","조금 천천히 말씀해 주시겠어요?"],
+    ["Just to confirm, you mean … ?","확인차 여쭤보면, …라는 말씀이시죠?"],
+    ["Could you elaborate on that?","조금 더 자세히 설명해 주시겠어요?"],
+    ["What do you mean by ___?","___는 어떤 의미인가요?"],
+    ["If I understood correctly, …","제가 이해한 게 맞다면…"]
+  ]},
+  { cat: "의견 말하기", items: [
+    ["From my perspective, …","제 관점에서는…"],
+    ["I'd like to add something here.","여기에 한 가지 덧붙이고 싶어요."],
+    ["May I jump in for a second?","잠깐 끼어들어도 될까요?"],
+    ["I see it a bit differently.","저는 조금 다르게 봅니다."],
+    ["That makes sense, but have we considered … ?","일리 있지만, …도 고려해 봤을까요?"],
+    ["I don't have a strong opinion either way.","어느 쪽이든 크게 상관없습니다."]
+  ]},
+  { cat: "동의 · 반대", items: [
+    ["I completely agree with that.","전적으로 동의합니다."],
+    ["I'm on board with this plan.","이 계획에 찬성합니다."],
+    ["I agree with the direction, but I have concerns about the timeline.","방향에는 동의하지만 일정이 우려됩니다."],
+    ["I'm not sure I agree — here's why.","동의하기 어려운데, 이유는 이렇습니다."],
+    ["Let's agree to disagree for now and move on.","이 부분은 이견을 남겨두고 넘어가시죠."]
+  ]},
+  { cat: "회의 진행 · 전환", items: [
+    ["Shall we move on to the next item?","다음 안건으로 넘어갈까요?"],
+    ["Let's take this offline.","이 건은 회의 후에 따로 논의하시죠."],
+    ["We're running short on time.","시간이 얼마 남지 않았네요."],
+    ["Can we circle back to this later?","이건 나중에 다시 다뤄도 될까요?"],
+    ["Let's park that for now.","일단 이건 보류해 두죠."]
+  ]},
+  { cat: "화상회의 트러블", items: [
+    ["You're breaking up a little.","소리가 자꾸 끊기네요."],
+    ["I think you're on mute.","음소거 상태이신 것 같아요."],
+    ["Can everyone see my screen?","제 화면 다들 보이시나요?"],
+    ["Sorry, my connection is unstable.","죄송해요, 제 연결이 불안정하네요."],
+    ["Let me share my screen.","화면 공유하겠습니다."]
+  ]},
+  { cat: "마무리 · 후속", items: [
+    ["To summarize, we agreed on …","정리하면, 우리는 …에 합의했습니다."],
+    ["I'll follow up with an email.","이메일로 후속 내용 공유드리겠습니다."],
+    ["What are the next steps?","다음 단계는 무엇인가요?"],
+    ["Who's the owner for this action item?","이 실행 항목의 담당자는 누구인가요?"],
+    ["Let's schedule a follow-up meeting.","후속 미팅을 잡으시죠."],
+    ["Thanks everyone — talk to you next week.","모두 감사합니다. 다음 주에 뵙겠습니다."]
+  ]}
+];
+
+const VOCAB_DEFAULT = [
+  { group: "일정 · 계획", words: [
+    ["timeline","전체 일정","We're still aligned with the original timeline."],
+    ["milestone","중간 목표","The next milestone is the beta release in March."],
+    ["deliverable","산출물","What are the key deliverables for this phase?"],
+    ["scope","작업 범위","That request is outside the current scope."],
+    ["lead time","소요 기간","The lead time for procurement is about six weeks."]
+  ]},
+  { group: "논의 · 협업", words: [
+    ["alignment","조율, 방향 일치","Let's make sure we have alignment before moving forward."],
+    ["consensus","합의","We reached a consensus on the pricing model."],
+    ["trade-off","상충 관계","There's a trade-off between speed and quality here."],
+    ["action item","실행 항목","I'll send out the action items after the meeting."],
+    ["takeaway","핵심 요점","The main takeaway is that we need more data."]
+  ]},
+  { group: "성과 · 지표", words: [
+    ["metric","지표","Which metric are we optimizing for?"],
+    ["benchmark","비교 기준","How does this benchmark against competitors?"],
+    ["conversion","전환(율)","Conversion improved by 12% after the redesign."],
+    ["retention","유지율","User retention is our top priority this quarter."],
+    ["projection","전망치","Our revenue projection assumes 20% growth."]
+  ]},
+  { group: "리스크 · 진행", words: [
+    ["blocker","진행을 막는 요소","Is there any blocker on your side?"],
+    ["dependency","의존성, 선행 조건","This task has a dependency on the API team."],
+    ["mitigation","(위험) 완화 대책","What's our mitigation plan if the vendor delays?"],
+    ["contingency","비상 대책","We should have a contingency for the launch date."],
+    ["bandwidth","업무 여력","I don't have the bandwidth to take that on this week."]
+  ]}
+];
+
+/* baked by Claude when the user shares an agenda in chat */
+const BAKED = { translation: null, vocab: null };
+
+/* ───────────────────────── helpers ───────────────────────── */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const hasHangul = (s) => /[ㄱ-힝]/.test(s);
+
+/* ── language pair + external links ── */
+const srcSel = $("#srcLang"), tgtSel = $("#tgtLang");
+function loadPair() {
+  try {
+    const p = JSON.parse(localStorage.getItem("mlp-pair") || "null");
+    if (p) { srcSel.value = p.src; tgtSel.value = p.tgt; }
+  } catch (e) {}
+}
+function savePair() {
+  localStorage.setItem("mlp-pair", JSON.stringify({ src: srcSel.value, tgt: tgtSel.value }));
+  updateExtLinks();
+}
+$("#swapBtn").addEventListener("click", () => {
+  const s = srcSel.value; srcSel.value = tgtSel.value; tgtSel.value = s; savePair();
+});
+srcSel.addEventListener("change", savePair);
+tgtSel.addEventListener("change", savePair);
+
+function updateExtLinks() {
+  const q = $("#q").value.trim();
+  const inputIsKo = q ? hasHangul(q) : srcSel.value === "ko";
+  // 한국어 입력이면 도착어(ko면 en)로, 그 외 입력이면 한국어로 번역
+  let tl;
+  if (inputIsKo) tl = tgtSel.value !== "ko" ? tgtSel.value : "en";
+  else tl = srcSel.value === "ko" || tgtSel.value === "ko" ? "ko" : tgtSel.value;
+  const text = encodeURIComponent(q || "");
+  $("#gLink").href =
+    "https://translate.google.com/?sl=auto&tl=" + tl + "&text=" + text + "&op=translate";
+  $("#pLink").href =
+    "https://papago.naver.com/?sk=auto&tk=" + tl + "&st=" + text;
+}
+
+/* ── search ── */
+const qInput = $("#q"), resultsBox = $("#results"), chip = $("#detectChip");
+function search() {
+  const raw = qInput.value.trim();
+  updateExtLinks();
+  if (!raw) { resultsBox.innerHTML = ""; chip.textContent = "AUTO"; return; }
+  const isKo = hasHangul(raw);
+  chip.textContent = isKo ? "KO → EN" : "EN → KO";
+  const q = raw.toLowerCase();
+  const hits = [];
+  if (isKo) {
+    for (const [k, v] of Object.entries(DICT_KO)) {
+      if (k === q) hits.push({ w: k, m: v, dir: "KO→EN", rank: 0 });
+      else if (k.startsWith(q)) hits.push({ w: k, m: v, dir: "KO→EN", rank: 1 });
+      else if (k.includes(q)) hits.push({ w: k, m: v, dir: "KO→EN", rank: 2 });
+    }
+    for (const [k, v] of Object.entries(DICT_EN)) {
+      if (v.includes(raw)) hits.push({ w: k, m: v, dir: "EN→KO", rank: 3 });
+    }
+  } else {
+    for (const [k, v] of Object.entries(DICT_EN)) {
+      if (k === q) hits.push({ w: k, m: v, dir: "EN→KO", rank: 0 });
+      else if (k.startsWith(q)) hits.push({ w: k, m: v, dir: "EN→KO", rank: 1 });
+      else if (k.includes(q)) hits.push({ w: k, m: v, dir: "EN→KO", rank: 2 });
+    }
+    for (const [k, v] of Object.entries(DICT_KO)) {
+      if (v.toLowerCase().includes(q)) hits.push({ w: k, m: v, dir: "KO→EN", rank: 3 });
+    }
+  }
+  hits.sort((a, b) => a.rank - b.rank || a.w.length - b.w.length);
+  const top = hits.slice(0, 10);
+  resultsBox.innerHTML = top.length
+    ? top.map((h) =>
+        '<div class="result" data-copy="' + esc(h.dir === "EN→KO" ? h.w : h.m) + '">' +
+        '<span class="w">' + esc(h.w) + "</span><span class=\"m\">" + esc(h.m) + "</span>" +
+        '<span class="dir">' + h.dir + "</span></div>"
+      ).join("")
+    : '<div class="no-hit">내장 사전에 없어요 — 아래 Google 번역/Papago 링크로 열어보세요.</div>';
+}
+qInput.addEventListener("input", search);
+resultsBox.addEventListener("click", (e) => {
+  const row = e.target.closest(".result");
+  if (row) navigator.clipboard && navigator.clipboard.writeText(row.dataset.copy).catch(() => {});
+});
+$("#clearBtn").addEventListener("click", () => { qInput.value = ""; search(); qInput.focus(); });
+
+/* ── tabs ── */
+$("#tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-tab]");
+  if (!b) return;
+  document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
+  document.querySelectorAll("section.panel").forEach((p) =>
+    p.classList.toggle("on", p.id === "panel-" + b.dataset.tab));
+});
+
+/* ── phrases ── */
+$("#panel-phrases").innerHTML = PHRASES.map((c) =>
+  '<div class="cat"><h3>' + esc(c.cat) + "</h3>" +
+  c.items.map(([en, kr]) =>
+    '<div class="phrase" data-en="' + esc(en) + '">' +
+    '<div class="en">' + esc(en) + '</div><div class="kr">' + esc(kr) + "</div>" +
+    '<span class="copied">복사됨 ✓</span></div>'
+  ).join("") + "</div>"
+).join("");
+$("#panel-phrases").addEventListener("click", (e) => {
+  const ph = e.target.closest(".phrase");
+  if (!ph) return;
+  navigator.clipboard && navigator.clipboard.writeText(ph.dataset.en).catch(() => {});
+  ph.classList.add("flash");
+  setTimeout(() => ph.classList.remove("flash"), 1200);
+});
+
+/* ── agenda annotation ── */
+const LEMMA_SUFFIX = [["ies","y"],["ses","s"],["es",""],["s",""],["ing",""],["inge","e"],["ed",""],["ede","e"]];
+function lookupLemma(word) {
+  const w = word.toLowerCase();
+  if (DICT_EN[w]) return DICT_EN[w];
+  for (const [suf, rep] of LEMMA_SUFFIX) {
+    if (w.length > suf.length + 2 && w.endsWith(suf)) {
+      const base = w.slice(0, -suf.length) + rep;
+      if (DICT_EN[base]) return DICT_EN[base];
+      if (DICT_EN[base + "e"]) return DICT_EN[base + "e"];
+    }
+  }
+  return null;
+}
+function annotate() {
+  const text = $("#agendaIn").value;
+  localStorage.setItem("mlp-agenda", text);
+  if (!text.trim()) { $("#annotated").innerHTML = ""; return; }
+  const html = esc(text).replace(/[A-Za-z][A-Za-z'’-]*/g, (m) => {
+    const t = lookupLemma(m);
+    return t ? '<span class="tip" data-t="' + esc(t) + '">' + m + "</span>" : m;
+  });
+  $("#annotated").innerHTML = html;
+}
+$("#annotateBtn").addEventListener("click", annotate);
+$("#agendaClearBtn").addEventListener("click", () => {
+  $("#agendaIn").value = ""; $("#annotated").innerHTML = "";
+  localStorage.removeItem("mlp-agenda");
+});
+
+/* ── vocab + baked content ── */
+function renderVocab(data) {
+  $("#vocabList").innerHTML = data.map((g) =>
+    '<div class="cat"><h3>' + esc(g.group) + "</h3>" +
+    g.words.map(([w, m, ex]) =>
+      '<div class="vword"><div class="head"><span class="w">' + esc(w) +
+      '</span><span class="m">' + esc(m) + "</span></div>" +
+      (ex ? '<div class="ex">' + esc(ex) + "</div>" : "") + "</div>"
+    ).join("") + "</div>"
+  ).join("");
+}
+renderVocab(BAKED.vocab || VOCAB_DEFAULT);
+if (BAKED.translation) {
+  $("#transEmpty").style.display = "none";
+  const tb = $("#transBody");
+  tb.style.display = "block";
+  tb.textContent = BAKED.translation;
+}
+
+/* ── init ── */
+loadPair();
+const savedAgenda = localStorage.getItem("mlp-agenda");
+if (savedAgenda) { $("#agendaIn").value = savedAgenda; annotate(); }
+updateExtLinks();
+</script>
