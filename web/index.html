@@ -234,6 +234,25 @@
   .lex .ex { font-size: 13px; color: var(--accent-ink); font-style: italic; margin-top: 3px; }
   .lex .alt { font-size: 13px; color: var(--muted); margin-top: 3px; }
 
+  /* meeting history */
+  nav.tabs button.reclive::after { content: "●"; color: var(--bad); margin-left: 6px; font-size: 10px; vertical-align: middle; }
+  .mtg {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center;
+    justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .mtg.on { border-color: var(--accent); }
+  .mtg-title { font-weight: 700; }
+  .mtg-meta { color: var(--muted); font-size: 12.5px; margin-left: 8px; }
+  .mtg-btns { display: flex; gap: 6px; }
+  .mtg-btns button {
+    font-size: 12px; border: 1px solid var(--line); background: transparent; color: var(--accent);
+    border-radius: 6px; padding: 3px 10px; cursor: pointer; font-family: inherit;
+  }
+  .mtg-btns button:hover { background: var(--accent-soft); }
+  #mtgDetail { margin-top: 14px; }
+  #mtgDetail .transcript { max-height: none; }
+
   /* settings dialog */
   dialog {
     border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink);
@@ -297,6 +316,7 @@
     <button data-tab="translation">전체 번역</button>
     <button data-tab="vocab">어휘 제안</button>
     <button data-tab="report">리포트</button>
+    <button data-tab="history">기록</button>
     <button data-tab="phrases">긴급 표현</button>
   </nav>
 
@@ -351,7 +371,7 @@
     <div id="transcript" class="transcript"></div>
     <div id="suggestBox"></div>
     <div class="composer">
-      <input id="composeIn" placeholder="하고 싶은 말을 한국어로 입력 → Enter (영국식 비즈니스 영어로 변환)" />
+      <input id="composeIn" placeholder="하고 싶은 말을 한국어로 입력 → Enter (자연스러운 비즈니스 표현으로 변환)" />
       <button class="btn" id="composeBtn">영어로</button>
     </div>
     <div id="composeOut"></div>
@@ -374,11 +394,20 @@
     <div id="repBody"></div>
   </section>
 
+  <section class="panel" id="panel-history">
+    <div class="hint">
+      라이브 녹취를 시작하면 회의가 자동으로 저장됩니다(이 브라우저에만, 최근 30개).
+      회의별로 녹취·리포트를 다시 보거나, Markdown 파일로 내보내거나, 삭제할 수 있어요.
+    </div>
+    <div id="mtgList"></div>
+    <div id="mtgDetail"></div>
+  </section>
+
   <section class="panel" id="panel-phrases"></section>
 
   <footer class="note">
     번역: Google 번역(비공식) · 음성 인식: 브라우저 Web Speech API(오디오 비저장) ·
-    AI(답변 제안·작문·리포트·어휘): Anthropic Claude, 영국식 영어 하네스 적용(선택, 키 필요) · 데이터는 브라우저에만 저장됩니다.
+    AI(답변 제안·작문·리포트·어휘): Anthropic Claude, 도착어별 스타일 하네스(영어: 영국식/미국식 선택) 적용(선택, 키 필요) · 데이터는 브라우저에만 저장됩니다.
   </footer>
 </div>
 
@@ -387,11 +416,14 @@
 <dialog id="settingsDlg">
   <h2>AI 기능 설정</h2>
   <p>
-    Anthropic API 키를 입력하면 어휘 제안·답변 제안·영어 작문·회의 리포트를 Claude(claude-opus-5)가 수행합니다.
-    모든 영어 출력에는 <b>영국식 · 직역 금지(자연스러운 비즈니스 표현) · professional-warm 톤</b> 규칙이 적용됩니다.
+    Anthropic API 키를 입력하면 어휘 제안·답변 제안·작문·회의 리포트를 Claude(claude-opus-5)가 수행합니다.
+    모든 출력에는 <b>도착어에 맞는 스타일 · 직역 금지(자연스러운 비즈니스 표현) · professional-warm 톤</b> 규칙이 적용됩니다.
     키는 이 브라우저의 localStorage에만 저장되며 Anthropic API 호출 외에는 전송되지 않습니다.
   </p>
   <input id="apiKeyIn" type="password" placeholder="sk-ant-..." />
+  <div style="margin:12px 0 4px; font-size:13px; font-weight:600;">영어 스타일 (도착어가 영어일 때)</div>
+  <label style="font-size:13px; margin-right:14px;"><input type="radio" name="engStyle" value="uk" checked /> 영국식 (British)</label>
+  <label style="font-size:13px;"><input type="radio" name="engStyle" value="us" /> 미국식 (American)</label>
   <div class="row">
     <button class="btn ghost" id="dlgCancel">닫기</button>
     <button class="btn" id="dlgSave">저장</button>
@@ -844,16 +876,31 @@ async function heuristicVocab(text, tl, onProgress) {
 }
 
 /* ───────── Claude API (optional, raw HTTP — static page, no build step) ───────── */
-/* 모든 AI 출력에 적용되는 하네스: 영국식 영어 · 직역 금지 · professional-but-warm */
-const HARNESS =
-  "You are an English-language meeting copilot for a Korean professional in international business meetings. " +
-  "Rules for ANY English you produce: " +
-  "(1) Use British English — spelling, vocabulary, and idiom. " +
-  "(2) Never translate literally. Produce natural business English that fits the context of the conversation; " +
-  "in particular, replace Korean-style humble or deferential phrasing (겸양 표현) with what a native British " +
-  "professional would actually say in that situation. " +
-  "(3) Tone: professional but warm. " +
-  "All explanations, glosses and nuance notes aimed at the user must be written in Korean.";
+/* 도착어별 하네스: 언어에 맞는 스타일 규칙 · 직역 금지 · professional-but-warm
+   영어는 설정(⚙)에서 영국식/미국식 선택 (기본: 영국식) */
+const LANG_NAMES = { ko: "한국어", en: "영어", ja: "일본어", "zh-CN": "중국어", es: "스페인어", de: "독일어", fr: "프랑스어" };
+const targetLangName = () => LANG_NAMES[tgtSel.value] || tgtSel.value;
+function harness() {
+  const tgt = tgtSel.value;
+  let langRule;
+  if (tgt === "en") {
+    langRule = store.get("engStyle", "uk") === "us"
+      ? "Use American English — spelling, vocabulary, and idiom."
+      : "Use British English — spelling, vocabulary, and idiom.";
+  } else {
+    const en = { ko: "Korean", ja: "Japanese", "zh-CN": "Mandarin Chinese (Simplified)", es: "Spanish", de: "German", fr: "French" };
+    langRule = "Produce output in natural, professional " + (en[tgt] || tgt) +
+      " as actually used in business settings by native speakers (register, honorifics and idiom appropriate to that language's business culture).";
+  }
+  return "You are a language copilot for a Korean professional in international business meetings. " +
+    "The meeting language is the target language below. Rules for ANY target-language text you produce: " +
+    "(1) " + langRule + " " +
+    "(2) Never translate literally. Produce natural business language that fits the context of the conversation; " +
+    "in particular, replace Korean-style humble or deferential phrasing (겸양 표현) with what a native professional " +
+    "speaker of the target language would actually say in that situation. " +
+    "(3) Tone: professional but warm. " +
+    "All explanations, glosses and nuance notes aimed at the user must be written in Korean.";
+}
 
 async function claudeJSON(userText, schema) {
   const key = store.get("apikey", "");
@@ -869,7 +916,7 @@ async function claudeJSON(userText, schema) {
     body: JSON.stringify({
       model: "claude-opus-5",
       max_tokens: 16000,
-      system: HARNESS,
+      system: harness(),
       output_config: { format: { type: "json_schema", schema } },
       messages: [{ role: "user", content: userText }]
     })
@@ -895,7 +942,7 @@ async function claudeVocab(text, srcName, tgtName) {
   const parsed = await claudeJSON(
     "다음은 " + srcName + " 화자가 " + tgtName + "로 진행되는 화상회의에서 사용할 회의 아젠다입니다. " +
     "이 회의에서 말할 때 필요할 핵심 어휘와 표현을 15~25개 뽑아 3~5개 그룹으로 나눠주세요. " +
-    "word는 자연스러운 비즈니스 " + tgtName + " 단어/표현(영어라면 영국식), meaning은 " + srcName + " 뜻, " +
+    "word는 자연스러운 비즈니스 " + tgtName + " 단어/표현, meaning은 " + srcName + " 뜻, " +
     "example은 회의에서 바로 쓸 수 있는 짧은 " + tgtName + " 예문으로 작성하세요.\n\n아젠다:\n" + text,
     schema
   );
@@ -981,7 +1028,37 @@ $("#agendaClearBtn").addEventListener("click", () => {
 const REC_DEFAULT = { en: "en-GB", ko: "ko-KR", ja: "ja-JP", "zh-CN": "zh-CN", es: "es-ES", de: "de-DE", fr: "fr-FR" };
 const transcriptBox = $("#transcript"), recBtn = $("#recBtn"), recStatus = $("#recStatus");
 let recog = null, recActive = false, interimText = "";
-let transcriptLines = store.get("transcript", []);
+
+/* 회의 단위 저장: meetings = [{id, ts, title, lines, report}] */
+let meetings = store.get("meetings", []);
+(function migrateOld() {
+  const old = store.get("transcript", null);
+  if (old && old.length) {
+    meetings.unshift({ id: Date.now(), ts: Date.now(), title: "이전 기록", lines: old, report: store.get("report", null) });
+    store.set("meetings", meetings);
+  }
+  store.del("transcript"); store.del("report");
+})();
+let currentId = null;          // 진행 중인 회의 id
+let reportTargetId = null;     // 리포트를 붙일 회의 id
+let transcriptLines = [];      // 진행 중 회의의 lines 참조
+
+function saveMeetings() { meetings = meetings.slice(0, 30); store.set("meetings", meetings); }
+function findMeeting(id) { return meetings.find((m) => m.id === id) || null; }
+function mtgTitle(prefix) {
+  return (prefix || "회의") + " " +
+    new Date().toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+function ensureMeeting() {
+  let m = findMeeting(currentId);
+  if (m) return m;
+  m = { id: Date.now(), ts: Date.now(), title: mtgTitle(), lines: transcriptLines, report: null };
+  currentId = m.id;
+  meetings.unshift(m);
+  saveMeetings();
+  renderHistory();
+  return m;
+}
 
 function isQuestion(t) {
   const s = t.trim().toLowerCase();
@@ -1003,14 +1080,15 @@ function renderTranscript() {
 
 async function addFinalLine(text) {
   const line = { text, q: isQuestion(text), tr: "" };
+  ensureMeeting();
   transcriptLines.push(line);
   renderTranscript();
-  store.set("transcript", transcriptLines);
+  saveMeetings();
   try {
     const r = await gtx(text, "auto", pickTarget(text));
     line.tr = r.text;
     renderTranscript();
-    store.set("transcript", transcriptLines);
+    saveMeetings();
   } catch {}
 }
 
@@ -1046,6 +1124,7 @@ function startRec() {
   recActive = true;
   recBtn.textContent = "⏹ 듣기 중지";
   recBtn.classList.add("rec");
+  document.querySelector('#tabs button[data-tab="live"]').classList.add("reclive");
   recStatus.classList.remove("err");
   recStatus.textContent = "듣는 중… (오디오는 저장되지 않습니다)";
 }
@@ -1054,11 +1133,16 @@ function stopRec() {
   try { recog && recog.stop(); } catch {}
   recBtn.textContent = "🎙 듣기 시작";
   recBtn.classList.remove("rec");
+  document.querySelector('#tabs button[data-tab="live"]').classList.remove("reclive");
   if (!recStatus.classList.contains("err")) recStatus.textContent = "";
   interimText = "";
   renderTranscript();
 }
 recBtn.addEventListener("click", () => (recActive ? stopRec() : startRec()));
+/* 브라우저 탭이 백그라운드였다가 돌아왔을 때 인식이 끊겼으면 재시작 (onend 자동 재시작의 보조 안전장치) */
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && recActive) { try { recog.start(); } catch {} }
+});
 
 /* 질문 → 답변 제안 (Claude, 하네스 적용) */
 transcriptBox.addEventListener("click", async (e) => {
@@ -1072,7 +1156,8 @@ transcriptBox.addEventListener("click", async (e) => {
     const parsed = await claudeJSON(
       "화상회의 중입니다. 아래는 최근 대화 기록이고, 마지막 줄이 방금 나온 질문/발언입니다:\n\n" + ctx +
       "\n\n제가(한국인 참석자) 지금 바로 말할 수 있는 자연스러운 답변 후보를 2~3개 제안해 주세요. " +
-      "서로 다른 방향(동의/신중/되묻기 등)이면 좋습니다. en은 실제로 말할 영어 문장, kr은 뉘앙스에 대한 짧은 한국어 설명.",
+      "서로 다른 방향(동의/신중/되묻기 등)이면 좋습니다. en은 실제로 말할 자연스러운 " + targetLangName() +
+      " 문장, kr은 뉘앙스에 대한 짧은 한국어 설명.",
       OBJ({ replies: ARR(OBJ({ en: S, kr: S })) })
     );
     box.innerHTML = parsed.replies.map((r) =>
@@ -1100,8 +1185,8 @@ async function composeNow() {
       const parsed = await claudeJSON(
         (ctx ? "최근 회의 대화:\n" + ctx + "\n\n" : "") +
         '제가 회의에서 말하려는 내용(한국어): "' + t + '"\n\n' +
-        "이걸 실제로 말할 자연스러운 영어 문장으로 2가지(기본 / 더 간결한 버전) 만들어 주세요. " +
-        "en은 영어 문장, kr은 짧은 뉘앙스 설명.",
+        "이걸 실제로 말할 자연스러운 " + targetLangName() + " 문장으로 2가지(기본 / 더 간결한 버전) 만들어 주세요. " +
+        "en은 " + targetLangName() + " 문장, kr은 짧은 뉘앙스 설명.",
         OBJ({ options: ARR(OBJ({ en: S, kr: S })) })
       );
       out.innerHTML = parsed.options.map((r) =>
@@ -1111,7 +1196,7 @@ async function composeNow() {
     } else {
       const r = await gtx(t, "auto", tgtSel.value === "ko" ? "en" : tgtSel.value);
       out.innerHTML = '<div class="sugg" data-copy="' + esc(r.text) + '"><div class="en">' + esc(r.text) +
-        '</div><div class="kr">자동 번역 결과 — 설정(⚙)에 API 키를 넣으면 문맥·영국식 표현으로 다듬어 드립니다.</div></div>';
+        '</div><div class="kr">자동 번역 결과 — 설정(⚙)에 API 키를 넣으면 문맥에 맞는 자연스러운 표현으로 다듬어 드립니다.</div></div>';
     }
   } catch (err) {
     out.innerHTML = '<div class="hint">' + esc(err.message || String(err)) + "</div>";
@@ -1125,23 +1210,31 @@ $("#composeOut").addEventListener("click", (e) => {
 });
 
 $("#clearTransBtn").addEventListener("click", () => {
+  if (currentId) { meetings = meetings.filter((m) => m.id !== currentId); currentId = null; saveMeetings(); }
   transcriptLines = []; interimText = "";
-  renderTranscript(); store.del("transcript");
+  renderTranscript(); renderHistory();
   $("#suggestBox").innerHTML = ""; $("#composeOut").innerHTML = "";
 });
 $("#endMeetingBtn").addEventListener("click", () => {
   stopRec();
+  if (!transcriptLines.length) { showTab("report"); return; }
   $("#repTranscriptIn").value = transcriptLines.map((l) => l.text).join("\n");
+  reportTargetId = currentId;
+  currentId = null;              // 다음 녹취는 새 회의로
+  transcriptLines = [];          // 라이브 화면 비움 (기록 탭에 보존)
+  interimText = "";
+  renderTranscript(); renderHistory();
+  $("#suggestBox").innerHTML = "";
   showTab("report");
 });
 
 /* ───────── post-meeting report (Claude, 하네스 적용) ───────── */
 const repBtn = $("#repBtn"), repStatus = $("#repStatus"), repBody = $("#repBody");
 
-function renderReport(r) {
+function renderReport(r, el = repBody) {
   const sec = (title, inner) => (inner ? '<div class="rep-sec"><h3>' + title + "</h3>" + inner + "</div>" : "");
   const list = (items) => (items && items.length ? "<ul>" + items.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>" : "");
-  repBody.innerHTML =
+  el.innerHTML =
     sec("회의 요약", r.summary ? "<div>" + esc(r.summary).replace(/\n/g, "<br>") + "</div>" : "") +
     sec("결정 사항", list(r.decisions)) +
     sec("액션 아이템", list(r.action_items)) +
@@ -1191,15 +1284,29 @@ repBtn.addEventListener("click", async () => {
       "1. summary: 회의 핵심 요약\n" +
       "2. decisions: 결정 사항\n" +
       "3. action_items: 액션 아이템 (담당자가 드러나면 포함)\n" +
-      "4. corrections: 기록 중 한국인 화자가 쓴 것으로 보이는 어색한 영어 표현 교정 (원문 → 자연스러운 개선안 → 이유). 없으면 빈 배열\n" +
+      "4. corrections: 기록 중 한국인 화자가 쓴 것으로 보이는 어색한 " + targetLangName() +
+      " 표현 교정 (원문 → 자연스러운 개선안 → 이유). 없으면 빈 배열\n" +
       "5. vocab: 이 회의 주제에서 배울 가치가 있는 어휘·표현 8~15개. 각 항목에 meaning(뜻), " +
       "nuance(뉘앙스 차이 — 격식 수준, 강도, 함의), situation(어떤 상황·상대에게 쓰는지), " +
       "example(회의에서 쓸 수 있는 예문), alternatives(비슷한 표현들과 뉘앙스 차이)를 반드시 포함.",
       schema
     );
     renderReport(r);
-    store.set("report", r);
-    repStatus.textContent = "완료 ✓";
+    /* 리포트를 회의 기록에 연결 (외부 회의록 붙여넣기면 새 기록 생성) */
+    let m = findMeeting(reportTargetId);
+    if (!m) {
+      m = {
+        id: Date.now(), ts: Date.now(), title: mtgTitle("리포트"),
+        lines: transcript.split("\n").filter(Boolean).map((t) => ({ text: t, q: false, tr: "" })),
+        report: null
+      };
+      meetings.unshift(m);
+      reportTargetId = m.id;
+    }
+    m.report = r;
+    saveMeetings();
+    renderHistory();
+    repStatus.textContent = "완료 ✓ (기록 탭에 저장됨)";
   } catch (e) {
     repStatus.textContent = e.message || String(e);
     repStatus.classList.add("err");
@@ -1208,16 +1315,118 @@ repBtn.addEventListener("click", async () => {
   }
 });
 
+/* ───────── meeting history ───────── */
+let histOpenId = null;
+
+function renderHistory() {
+  const list = $("#mtgList");
+  if (!meetings.length) {
+    list.innerHTML = '<div class="empty">저장된 회의가 없습니다.<br><b>라이브 탭에서 녹취를 시작하면 자동으로 기록됩니다.</b></div>';
+    $("#mtgDetail").innerHTML = "";
+    return;
+  }
+  list.innerHTML = meetings.map((m) =>
+    '<div class="mtg' + (m.id === histOpenId ? " on" : "") + '" data-id="' + m.id + '">' +
+    '<div><span class="mtg-title">' + esc(m.title) + '</span>' +
+    '<span class="mtg-meta">' + new Date(m.ts).toLocaleString("ko-KR") + " · " + m.lines.length + "줄" +
+    (m.report ? " · 리포트 ✓" : "") + (m.id === currentId ? " · 🔴 진행 중" : "") + "</span></div>" +
+    '<div class="mtg-btns"><button data-act="view">보기</button><button data-act="md">MD 저장</button><button data-act="del">삭제</button></div>' +
+    "</div>"
+  ).join("");
+}
+
+function renderDetail(m) {
+  const el = $("#mtgDetail");
+  if (!m) { el.innerHTML = ""; return; }
+  el.innerHTML =
+    '<div class="rep-sec"><h3>회의 기록 — ' + esc(m.title) + '</h3><div class="transcript">' +
+    m.lines.map((l) =>
+      '<div class="tline"><span class="orig">' + esc(l.text) + "</span>" +
+      (l.tr ? '<div class="tr">' + esc(l.tr) + "</div>" : "") + "</div>"
+    ).join("") + '</div></div><div id="mtgReport"></div>';
+  const repEl = el.querySelector("#mtgReport");
+  if (m.report) renderReport(m.report, repEl);
+  else repEl.innerHTML =
+    '<div class="empty">이 회의의 리포트가 아직 없습니다.<br><br>' +
+    '<button class="btn ghost" id="genFromHist">이 기록으로 리포트 생성</button></div>';
+}
+
+function meetingToMd(m) {
+  let md = "# " + m.title + "\n\n" + new Date(m.ts).toLocaleString("ko-KR") + "\n\n## 회의 기록\n\n";
+  md += m.lines.map((l) => "- " + l.text + (l.tr ? "\n  - " + l.tr : "")).join("\n");
+  const r = m.report;
+  if (r) {
+    if (r.summary) md += "\n\n## 요약\n\n" + r.summary;
+    if (r.decisions?.length) md += "\n\n## 결정 사항\n\n" + r.decisions.map((d) => "- " + d).join("\n");
+    if (r.action_items?.length) md += "\n\n## 액션 아이템\n\n" + r.action_items.map((d) => "- " + d).join("\n");
+    if (r.corrections?.length) md += "\n\n## 표현 교정\n\n" +
+      r.corrections.map((c) => "- ~~" + c.original + "~~ → **" + c.improved + "**\n  - " + c.why).join("\n");
+    if (r.vocab?.length) md += "\n\n## 학습 어휘\n\n" +
+      r.vocab.map((v) =>
+        "### " + v.expression + " — " + v.meaning +
+        "\n- 뉘앙스: " + v.nuance + "\n- 쓰는 상황: " + v.situation + "\n- 예문: " + v.example +
+        ((v.alternatives || []).length
+          ? "\n- 비슷한 표현: " + v.alternatives.map((a) => a.expression + " (" + a.nuance_diff + ")").join(", ")
+          : "")
+      ).join("\n\n");
+  }
+  return md;
+}
+
+$("#mtgList").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-act]");
+  const card = e.target.closest(".mtg");
+  if (!card) return;
+  const id = +card.dataset.id;
+  const m = findMeeting(id);
+  if (!m) return;
+  const act = btn ? btn.dataset.act : "view";
+  if (act === "view") {
+    histOpenId = id;
+    renderHistory();
+    renderDetail(m);
+  } else if (act === "md") {
+    const blob = new Blob([meetingToMd(m)], { type: "text/markdown;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = m.title.replace(/[\\/:*?"<>|]/g, "_") + ".md";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } else if (act === "del") {
+    if (!confirm('"' + m.title + '" 기록을 삭제할까요?')) return;
+    meetings = meetings.filter((x) => x.id !== id);
+    if (currentId === id) { currentId = null; transcriptLines = []; renderTranscript(); }
+    if (histOpenId === id) { histOpenId = null; $("#mtgDetail").innerHTML = ""; }
+    saveMeetings();
+    renderHistory();
+  }
+});
+$("#mtgDetail").addEventListener("click", (e) => {
+  if (e.target.id !== "genFromHist") return;
+  const m = findMeeting(histOpenId);
+  if (!m) return;
+  $("#repTranscriptIn").value = m.lines.map((l) => l.text).join("\n");
+  reportTargetId = m.id;
+  showTab("report");
+});
+
 /* ───────── settings ───────── */
 const dlg = $("#settingsDlg");
 $("#settingsBtn").addEventListener("click", () => {
   $("#apiKeyIn").value = store.get("apikey", "");
+  const style = store.get("engStyle", "uk");
+  document.querySelectorAll('input[name="engStyle"]').forEach((r) => { r.checked = r.value === style; });
   dlg.showModal();
 });
 $("#dlgCancel").addEventListener("click", () => dlg.close());
 $("#dlgSave").addEventListener("click", () => {
   const v = $("#apiKeyIn").value.trim();
   if (v) store.set("apikey", v); else store.del("apikey");
+  const style = document.querySelector('input[name="engStyle"]:checked')?.value || "uk";
+  store.set("engStyle", style);
+  // 영어 인식 언어도 스타일에 맞춰 조정 (사용자가 직접 바꾼 경우는 존중)
+  const rl = $("#recLang");
+  if (rl.value === "en-GB" || rl.value === "en-US") rl.value = style === "us" ? "en-US" : "en-GB";
   dlg.close();
 });
 
@@ -1229,10 +1438,10 @@ const savedAgenda = store.get("agenda", "");
 if (savedAgenda) { $("#agendaIn").value = savedAgenda; annotate(savedAgenda); }
 const savedTrans = store.get("translation", "");
 if (savedTrans) setTranslation(savedTrans);
-$("#recLang").value = REC_DEFAULT[tgtSel.value] || "en-GB";
-if (transcriptLines.length) renderTranscript();
-const savedReport = store.get("report", null);
-if (savedReport) renderReport(savedReport);
+$("#recLang").value = tgtSel.value === "en"
+  ? (store.get("engStyle", "uk") === "us" ? "en-US" : "en-GB")
+  : (REC_DEFAULT[tgtSel.value] || "en-GB");
+renderHistory();
 </script>
 </body>
 </html>
