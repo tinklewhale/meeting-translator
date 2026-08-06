@@ -151,9 +151,27 @@
   .status.err { color: var(--bad); }
   .annotated {
     background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-    padding: 16px 18px; white-space: pre-wrap; font-size: 15px; line-height: 1.9;
+    padding: 16px 18px; font-size: 15px; line-height: 1.85;
   }
   .annotated:empty { display: none; }
+
+  /* markdown view (아젠다 원문 · 전체 번역 공용) */
+  .mdview h1, .mdview h2, .mdview h3, .mdview h4, .mdview h5, .mdview h6 { margin: 14px 0 6px; line-height: 1.35; }
+  .mdview h1 { font-size: 20px; } .mdview h2 { font-size: 18px; } .mdview h3 { font-size: 16px; }
+  .mdview h4, .mdview h5, .mdview h6 { font-size: 15px; }
+  .mdview p { margin: 6px 0; }
+  .mdview ul, .mdview ol { margin: 6px 0; padding-left: 22px; }
+  .mdview li { margin: 3px 0; }
+  .mdview .tblwrap { overflow-x: auto; margin: 10px 0; }
+  .mdview table { border-collapse: collapse; min-width: 50%; }
+  .mdview th, .mdview td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; font-size: 14px; vertical-align: top; }
+  .mdview th { background: var(--accent-soft); font-weight: 700; }
+  .mdview code {
+    background: var(--accent-soft); border-radius: 4px; padding: 1px 5px;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px;
+  }
+  .mdview blockquote { border-left: 3px solid var(--line); margin: 6px 0; padding: 2px 12px; color: var(--muted); }
+  .mdview hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   .tok { border-bottom: 1.5px dotted color-mix(in srgb, var(--muted) 55%, transparent); border-radius: 2px; cursor: help; }
   .tok:hover { background: var(--mark-bg); border-bottom-color: var(--mark-ink); }
   #tip {
@@ -171,7 +189,7 @@
   .empty b { color: var(--ink); }
   .trans-body {
     background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-    padding: 18px 20px; white-space: pre-wrap; line-height: 1.8;
+    padding: 18px 20px; line-height: 1.8;
   }
   .vword {
     background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
@@ -323,7 +341,8 @@
   <section class="panel on" id="panel-agenda">
     <div class="hint">
       아젠다를 붙여넣고 <b>번역 + 분석</b>을 누르면 ① 전체 번역, ② 원문 단어별 마우스오버 툴팁,
-      ③ 어휘 제안이 한 번에 준비됩니다. 툴팁은 단어에 마우스를 올리는 순간 자동 번역됩니다.
+      ③ 어휘 제안이 한 번에 준비됩니다. <b>Markdown 지원</b> — 제목(#), 목록, <b>표(|)</b>, 굵게(**) 등이
+      문서 형태로 렌더링되고, 그 위에서 단어에 마우스를 올리면 뜻이 보입니다.
     </div>
     <textarea id="agendaIn" placeholder="회의 아젠다를 여기에 붙여넣으세요…"></textarea>
     <div class="agenda-actions">
@@ -331,7 +350,7 @@
       <button class="btn ghost" id="agendaClearBtn">초기화</button>
       <span class="status" id="runStatus"></span>
     </div>
-    <div class="annotated" id="annotated"></div>
+    <div class="annotated mdview" id="annotated"></div>
   </section>
 
   <section class="panel" id="panel-translation">
@@ -339,7 +358,7 @@
       아직 번역된 아젠다가 없습니다.<br /><br />
       <b>아젠다 원문 탭에서 텍스트를 붙여넣고 [번역 + 분석]을 눌러주세요.</b>
     </div>
-    <div class="trans-body" id="transBody" style="display:none"></div>
+    <div class="trans-body mdview" id="transBody" style="display:none"></div>
   </section>
 
   <section class="panel" id="panel-vocab">
@@ -758,12 +777,77 @@ $("#panel-phrases").addEventListener("click", (e) => {
   setTimeout(() => ph.classList.remove("flash"), 1200);
 });
 
-/* ───────── agenda: annotate + hover tooltip ───────── */
+/* ───────── lightweight markdown renderer (표 지원, 외부 라이브러리 없음) ───────── */
+function wrapToks(html) {
+  // 태그·HTML 엔티티는 건너뛰고 텍스트 노드에만 툴팁 토큰을 입힘
+  return html.split(/(<[^>]+>|&[a-zA-Z#0-9]+;)/g).map((part) =>
+    part.startsWith("<") || part.startsWith("&")
+      ? part
+      : part.replace(/[A-Za-z][A-Za-z'’-]{1,}|[가-힣]{2,}/g, (m) => '<span class="tok">' + m + "</span>")
+  ).join("");
+}
+function mdInline(s, toks) {
+  let h = esc(s);
+  h = h.replace(/`([^`]+)`/g, (m, c) => "<code>" + c + "</code>");
+  h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  h = h.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  return toks ? wrapToks(h) : h;
+}
+function mdRow(line) {
+  return line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+}
+function mdRender(text, toks = false) {
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  const out = [];
+  let i = 0, listBuf = null, listType = null;
+  const flushList = () => {
+    if (listBuf) out.push("<" + listType + ">" + listBuf.join("") + "</" + listType + ">");
+    listBuf = null; listType = null;
+  };
+  while (i < lines.length) {
+    const line = lines[i];
+    /* 표: 현재 줄에 | 가 있고 다음 줄이 |---|--- 구분선 */
+    if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(lines[i + 1]) && /-/.test(lines[i + 1])) {
+      flushList();
+      const header = mdRow(line);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && /\|/.test(lines[i]) && lines[i].trim()) { rows.push(mdRow(lines[i])); i++; }
+      out.push('<div class="tblwrap"><table><thead><tr>' +
+        header.map((c) => "<th>" + mdInline(c, toks) + "</th>").join("") +
+        "</tr></thead><tbody>" +
+        rows.map((r) => "<tr>" + r.map((c) => "<td>" + mdInline(c, toks) + "</td>").join("") + "</tr>").join("") +
+        "</tbody></table></div>");
+      continue;
+    }
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { flushList(); out.push("<h" + h[1].length + ">" + mdInline(h[2], toks) + "</h" + h[1].length + ">"); i++; continue; }
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { flushList(); out.push("<hr>"); i++; continue; }
+    if (/^\s*[-*+]\s+/.test(line)) {
+      if (!listBuf || listType !== "ul") { flushList(); listType = "ul"; listBuf = []; }
+      listBuf.push("<li>" + mdInline(line.replace(/^\s*[-*+]\s+/, ""), toks) + "</li>"); i++; continue;
+    }
+    if (/^\s*\d+[.)]\s+/.test(line)) {
+      if (!listBuf || listType !== "ol") { flushList(); listType = "ol"; listBuf = []; }
+      listBuf.push("<li>" + mdInline(line.replace(/^\s*\d+[.)]\s+/, ""), toks) + "</li>"); i++; continue;
+    }
+    if (/^\s*&gt;\s?/.test(esc(line))) {
+      flushList();
+      out.push("<blockquote>" + mdInline(line.replace(/^\s*>\s?/, ""), toks) + "</blockquote>"); i++; continue;
+    }
+    if (!line.trim()) { flushList(); i++; continue; }
+    flushList();
+    out.push("<p>" + mdInline(line, toks) + "</p>");
+    i++;
+  }
+  flushList();
+  return out.join("");
+}
+
+/* ───────── agenda: markdown render + hover tooltip ───────── */
 function annotate(text) {
-  // wrap every word-like token (Latin words + Hangul runs) for hover translation
-  const html = esc(text).replace(/[A-Za-z][A-Za-z'’-]{1,}|[가-힣]{2,}/g, (m) =>
-    '<span class="tok">' + m + "</span>");
-  $("#annotated").innerHTML = html;
+  // 마크다운 렌더링(표 포함) + 텍스트 노드의 단어에 호버 툴팁 토큰
+  $("#annotated").innerHTML = mdRender(text, true);
 }
 
 const tip = $("#tip");
@@ -835,7 +919,7 @@ function setTranslation(text) {
   $("#transEmpty").style.display = "none";
   const tb = $("#transBody");
   tb.style.display = "block";
-  tb.textContent = text;
+  tb.innerHTML = mdRender(text, false);
 }
 
 /* ───────── vocab: heuristic extraction + translation ───────── */
