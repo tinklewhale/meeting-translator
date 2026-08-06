@@ -26,7 +26,15 @@
       "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", Roboto, sans-serif;
     font-size: 15px; line-height: 1.55;
   }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px 80px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px 80px; }
+
+  /* 회의 탭: 라이브 + 아젠다 2단 */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  .colhead {
+    font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px;
+  }
 
   header.top {
     display: flex; align-items: center; justify-content: space-between;
@@ -326,37 +334,69 @@
         <button id="clearBtn" type="button">지우기</button>
       </div>
     </div>
+
+    <nav class="tabs" id="tabs">
+      <button data-tab="meeting" class="on">회의</button>
+      <button data-tab="translation">전체 번역</button>
+      <button data-tab="vocab">어휘 제안</button>
+      <button data-tab="report">리포트</button>
+      <button data-tab="history">기록</button>
+      <button data-tab="phrases">긴급 표현</button>
+    </nav>
   </div>
 
-  <nav class="tabs" id="tabs">
-    <button data-tab="live">라이브</button>
-    <button data-tab="agenda" class="on">아젠다 원문</button>
-    <button data-tab="translation">전체 번역</button>
-    <button data-tab="vocab">어휘 제안</button>
-    <button data-tab="report">리포트</button>
-    <button data-tab="history">기록</button>
-    <button data-tab="phrases">긴급 표현</button>
-  </nav>
-
-  <section class="panel on" id="panel-agenda">
-    <div class="hint">
-      아젠다를 붙여넣고 <b>번역 + 분석</b>을 누르면 ① 전체 번역, ② 원문 단어별 마우스오버 툴팁,
-      ③ 어휘 제안이 한 번에 준비됩니다. <b>Markdown 지원</b> — 제목(#), 목록, <b>표(|)</b>, 굵게(**) 등이
-      문서 형태로 렌더링되고, 그 위에서 단어에 마우스를 올리면 뜻이 보입니다.
+  <section class="panel on" id="panel-meeting">
+    <div class="cols">
+      <div class="col">
+        <div class="colhead">🎙 라이브 — 실시간 녹취·번역</div>
+        <div class="hint">
+          <b>듣기 시작</b>을 누르면 마이크로 들리는 말을 계속 인식해서, 문장이 끝날 때마다
+          자동으로 녹취 + 번역이 붙습니다(크롬 권장·마이크 권한 필요·오디오 비저장).
+          질문으로 감지된 문장에는 <b>답변 제안</b> 버튼이 생깁니다(API 키 필요).
+        </div>
+        <div class="live-ctl">
+          <button class="btn" id="recBtn">🎙 듣기 시작</button>
+          <select id="recLang" aria-label="인식 언어">
+            <option value="en-GB">English (UK)</option><option value="en-US">English (US)</option>
+            <option value="ko-KR">한국어</option><option value="ja-JP">日本語</option>
+            <option value="zh-CN">中文</option><option value="es-ES">Español</option>
+            <option value="de-DE">Deutsch</option><option value="fr-FR">Français</option>
+          </select>
+          <span class="status" id="recStatus"></span>
+        </div>
+        <div id="transcript" class="transcript"></div>
+        <div id="suggestBox"></div>
+        <div class="composer">
+          <input id="composeIn" placeholder="하고 싶은 말을 한국어로 입력 → Enter (자연스러운 비즈니스 표현으로 변환)" />
+          <button class="btn" id="composeBtn">영어로</button>
+        </div>
+        <div id="composeOut"></div>
+        <div class="agenda-actions">
+          <button class="btn ghost" id="endMeetingBtn">회의 종료 → 리포트 생성</button>
+          <button class="btn ghost" id="clearTransBtn">기록 지우기</button>
+        </div>
+      </div>
+      <div class="col">
+        <div class="colhead">📋 아젠다 원문</div>
+        <div class="hint">
+          아젠다를 붙여넣고 <b>번역 + 분석</b> — 전체 번역·단어 툴팁·어휘 제안이 한 번에 준비됩니다.
+          <b>Markdown 지원</b>(제목·목록·<b>표</b>·굵게). 단어에 마우스를 올리면 뜻이 보입니다.
+        </div>
+        <textarea id="agendaIn" placeholder="회의 아젠다를 여기에 붙여넣으세요… (Markdown 지원)"></textarea>
+        <div class="agenda-actions">
+          <button class="btn" id="runBtn">번역 + 분석</button>
+          <button class="btn ghost" id="agendaClearBtn">초기화</button>
+          <span class="status" id="runStatus"></span>
+        </div>
+        <div class="annotated mdview" id="annotated"></div>
+      </div>
     </div>
-    <textarea id="agendaIn" placeholder="회의 아젠다를 여기에 붙여넣으세요…"></textarea>
-    <div class="agenda-actions">
-      <button class="btn" id="runBtn">번역 + 분석</button>
-      <button class="btn ghost" id="agendaClearBtn">초기화</button>
-      <span class="status" id="runStatus"></span>
-    </div>
-    <div class="annotated mdview" id="annotated"></div>
   </section>
 
   <section class="panel" id="panel-translation">
     <div id="transEmpty" class="empty">
       아직 번역된 아젠다가 없습니다.<br /><br />
-      <b>아젠다 원문 탭에서 텍스트를 붙여넣고 [번역 + 분석]을 눌러주세요.</b>
+      <b>회의 탭의 아젠다 섹션에 텍스트를 붙여넣고 [번역 + 분석]을 눌러주세요.</b>
     </div>
     <div class="trans-body mdview" id="transBody" style="display:none"></div>
   </section>
@@ -368,36 +408,6 @@
       아래는 기본 비즈니스 어휘입니다.
     </div>
     <div id="vocabList"></div>
-  </section>
-
-  <section class="panel" id="panel-live">
-    <div class="hint">
-      🎙 <b>듣기 시작</b>을 누르면 마이크로 들리는 말을 실시간 녹취하고 바로 번역합니다(크롬 권장, 마이크 권한 필요).
-      질문으로 감지된 문장에는 <b>답변 제안</b> 버튼이 생깁니다(API 키 필요).
-      오디오는 저장되지 않으며 텍스트 기록만 이 브라우저에 남습니다.
-      화상회의에서는 스피커로 소리를 틀어두면 상대방 음성도 마이크로 잡을 수 있어요(이어폰 사용 시엔 내 음성만).
-    </div>
-    <div class="live-ctl">
-      <button class="btn" id="recBtn">🎙 듣기 시작</button>
-      <select id="recLang" aria-label="인식 언어">
-        <option value="en-GB">English (UK)</option><option value="en-US">English (US)</option>
-        <option value="ko-KR">한국어</option><option value="ja-JP">日本語</option>
-        <option value="zh-CN">中文</option><option value="es-ES">Español</option>
-        <option value="de-DE">Deutsch</option><option value="fr-FR">Français</option>
-      </select>
-      <span class="status" id="recStatus"></span>
-    </div>
-    <div id="transcript" class="transcript"></div>
-    <div id="suggestBox"></div>
-    <div class="composer">
-      <input id="composeIn" placeholder="하고 싶은 말을 한국어로 입력 → Enter (자연스러운 비즈니스 표현으로 변환)" />
-      <button class="btn" id="composeBtn">영어로</button>
-    </div>
-    <div id="composeOut"></div>
-    <div class="agenda-actions">
-      <button class="btn ghost" id="endMeetingBtn">회의 종료 → 리포트 생성</button>
-      <button class="btn ghost" id="clearTransBtn">기록 지우기</button>
-    </div>
   </section>
 
   <section class="panel" id="panel-report">
@@ -1208,7 +1218,7 @@ function startRec() {
   recActive = true;
   recBtn.textContent = "⏹ 듣기 중지";
   recBtn.classList.add("rec");
-  document.querySelector('#tabs button[data-tab="live"]').classList.add("reclive");
+  document.querySelector('#tabs button[data-tab="meeting"]').classList.add("reclive");
   recStatus.classList.remove("err");
   recStatus.textContent = "듣는 중… (오디오는 저장되지 않습니다)";
 }
@@ -1217,7 +1227,7 @@ function stopRec() {
   try { recog && recog.stop(); } catch {}
   recBtn.textContent = "🎙 듣기 시작";
   recBtn.classList.remove("rec");
-  document.querySelector('#tabs button[data-tab="live"]').classList.remove("reclive");
+  document.querySelector('#tabs button[data-tab="meeting"]').classList.remove("reclive");
   if (!recStatus.classList.contains("err")) recStatus.textContent = "";
   interimText = "";
   renderTranscript();
@@ -1405,7 +1415,7 @@ let histOpenId = null;
 function renderHistory() {
   const list = $("#mtgList");
   if (!meetings.length) {
-    list.innerHTML = '<div class="empty">저장된 회의가 없습니다.<br><b>라이브 탭에서 녹취를 시작하면 자동으로 기록됩니다.</b></div>';
+    list.innerHTML = '<div class="empty">저장된 회의가 없습니다.<br><b>회의 탭에서 녹취를 시작하면 자동으로 기록됩니다.</b></div>';
     $("#mtgDetail").innerHTML = "";
     return;
   }
